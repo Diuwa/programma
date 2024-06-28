@@ -5,6 +5,20 @@
 #include <unistd.h>
 #include <utmp.h>
 #include <time.h>
+#include <stdlib.h>
+
+#define UT_NAMESIZE 32
+
+struct user_info
+{
+    char *username;
+};
+
+struct user_list
+{
+    struct user_info *users;
+    size_t count;
+};
 
 
 int opzione_L(const char *username){
@@ -50,7 +64,7 @@ int opzione_S(const char *username){
     
     char *sTty = "*";
     time_t lTime = 0;
-
+    
     setutent();
     // Serve per prendere il terminale alla quale l'utente appartiene
     while ((ute = getutent()) != NULL) {
@@ -92,39 +106,50 @@ int opzione_S(const char *username){
 
 //funzione che stampa tutti gli utenti
 
-int all_user(int tOpt){
+int all_user(int tOpt, struct user_list *userList){
     struct utmp *ut;
 
     setutent();
 
+    userList -> users = NULL;
+    userList -> count = 0;
+
     while((ut = getutent())!= NULL){
         if (ut -> ut_type == USER_PROCESS){
-            if (tOpt == 0)
-            {
-                opzione_L(ut -> ut_name);
-            } else if (tOpt == 1)
-            {
-                opzione_S(ut -> ut_user);
+            userList -> count++;
+            userList -> users = realloc(userList -> users, userList -> count * sizeof(struct user_info));
+            if (userList->users == NULL) {
+                perror("realloc failed");
+                endutent();
+                return 1;
             }
-            
-            
-            
-            
-            /*
-                Aggiungere controlli del tipo se flag_L true...
-                struct passwd *pw = getpwnam(ut -> ut_user);
-                printf("Nome reale : %s\n", pw -> pw_gecos);
-                printf("TTy: %s \n", ut -> ut_line);
-                printf("Utenti Attivi: %s\n", ut -> ut_user);
-            */
-            //opzione_L(ut -> ut_name);
-            
+
+            userList->users[userList->count - 1].username = strndup(ut->ut_user, UT_NAMESIZE);
+            if (userList->users[userList->count - 1].username == NULL) {
+                perror("strdup failed");
+                endutent();
+                return 1;
+            }
         }
         
     }
 
     endutent();
-    return 0;
+
+    for (size_t i = 0; i < userList->count; i++)
+    {
+        if (tOpt == 0){
+            opzione_L(userList->users[i].username);
+            free(userList->users[i].username);
+        } else if (tOpt == 1)
+        {
+            printf("Prova p");
+        } else if (tOpt == 2)
+        {
+            opzione_S(userList->users[i].username);
+            free(userList->users[i].username); }
+    }
+    return 0;    
 }
 
 //main
@@ -135,6 +160,7 @@ int main (int args, char *argv[] ){
     int opt;
     int counter = 1;
     const char *username = NULL;
+    struct user_list userList;
 
 
     bool l_flag = false;
@@ -180,19 +206,19 @@ int main (int args, char *argv[] ){
         int a;
         if (counter > 2 || l_flag || args == 1)
         {
-            a = all_user(0);
+            a = all_user(0, &userList);
             return a;
         }else if (p_flag)
         {
-            a = all_user(1);
+            a = all_user(1, &userList);
             return a;
         }else if (s_flag)
         {
-            a = all_user(2);
+            a = all_user(2, &userList);
             return a;
         }else if (m_flag)
         {
-            a = all_user(3);
+            a = all_user(3, &userList);
             return a;
         }
         
@@ -267,5 +293,8 @@ int main (int args, char *argv[] ){
     return 0;
 
 }
+
+
+
 
 
