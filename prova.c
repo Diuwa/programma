@@ -9,6 +9,13 @@
 
 #define UT_NAMESIZE 32
 
+
+/*
+
+    contenuto di plan in /home/vboxuser/.plan
+
+*/
+
 struct user_info
 {
     char *username;
@@ -21,9 +28,19 @@ struct user_list
 };
 
 
+/*
+    Opzione_M come il controllo normale, e aggiungi un case insesitive quando non e m, guarda su internet
+    Opzione_P guarda su finger ma hai tutto il necessario
+*/
+
 int opzione_L(const char *username){
 
     struct passwd *pws = getpwnam(username);
+
+    /*
+        Basta chiamare opzione_m e aggiungerci anche il Plan
+    */
+
 
 
     /*
@@ -293,7 +310,6 @@ int main (int args, char *argv[] ){
     return 0;
 
 }
-
 
 
 
