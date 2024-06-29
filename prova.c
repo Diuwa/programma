@@ -10,12 +10,6 @@
 #define UT_NAMESIZE 32
 
 
-/*
-
-    contenuto di plan in /home/vboxuser/.plan
-
-*/
-
 struct user_info
 {
     char *username;
@@ -30,22 +24,57 @@ struct user_list
 
 /*
     Opzione_M come il controllo normale, e aggiungi un case insesitive quando non e m, guarda su internet
-    Opzione_P guarda su finger ma hai tutto il necessario
 */
 
 int opzione_P(const char *username){
+
     struct passwd *pwd = getpwnam(username);
-    
+    struct utmp *ut;
+    time_t currentT = time(NULL);
+    char time_buf[256];
+
     char *login = pwd -> pw_name;
     printf("Login: %-15s\t\t\t", login);
     
-    char *realName = pwd -> pw_gecos;
-    char *del = strchr(realName, ',');
-    *del = '\0';
+    char *geCos = pwd -> pw_gecos;
+
+    char *realName = strtok(geCos, ","); // Qui prende il nome reale
+    char *office = strtok(NULL, ","); // Scrivo NULL per poter far riprendere a strtok dal punto di prima
+    char *ofPhone = strtok(NULL, ",");
+    char *nPhone = strtok(NULL, ",");
 
     printf("Name: %s\n", realName);
     printf("Directory: %-20s\t\t", pwd -> pw_dir);
     printf("Shell: %s\n", pwd -> pw_shell);
+    printf("Office: %s, %-4s\t\t\t", office, ofPhone);
+    printf("Home Phone: %s\n", nPhone);
+
+    char *sTty = "*";
+    time_t lTime = 0;
+    
+    setutent();
+    // Serve per prendere il terminale alla quale l'utente appartiene
+    while ((ut = getutent()) != NULL) {
+        if (strncmp(ut->ut_user, login,sizeof(ut->ut_user)) == 0) {
+            lTime = ut -> ut_tv.tv_sec;
+            sTty = ut->ut_line;
+            break;
+        }
+    }
+    endutent();
+
+    struct tm *tm_info = localtime(&lTime);
+
+    strftime(time_buf, sizeof(time_buf), "%a %b %d %H:%M", tm_info);
+    time_buf[16] = '\0';
+
+    long idle_seconds = currentT - lTime;
+    int idle_hours = idle_seconds / 3600;
+    int idle_minutes = (idle_seconds % 3600) / 60;
+
+    printf("On since %s (CEST) on %s from %s\n", time_buf, sTty, sTty);
+
+    return 0;
 
 }
 
@@ -54,26 +83,36 @@ int opzione_P(const char *username){
 
 int opzione_L(const char *username){
 
-    struct passwd *pws = getpwnam(username);
+    opzione_P(username);
+    int vuoto = 0;
 
-    /*
-        Basta chiamare opzione_p e aggiungerci anche il Plan
-    */
+    printf("Plan:\n");
 
+    FILE *file;
+    char buffer[1024];
 
+    // Apre il file ~/.plan in modalità di lettura
+    file = fopen("/home/vboxuser/.plan", "r");
+    if (file == NULL) {
+        perror("Errore nell'apertura del file");
+        return 1;
+    }
 
-    /*
-        Operazioni sulle stringhe per il nome reale in quanto pw_gecos contiene altre informazioni oltre 
-        il nome reale di conseguenza c'e la necessita di togliere 3 virgole finali
-    */
+    // Legge e stampa il contenuto del file riga per riga
+    while (fgets(buffer, 1024, file) != NULL) {
+        printf("%s", buffer);
+        vuoto = 1;
+    }
+
+    // Chiude il file dopo aver completato la lettura
+    fclose(file);
+
+    if (vuoto == 0)
+    {
+        printf("No Plan\n");
+    }
     
-    char *prova = pws -> pw_gecos;
-    size_t len = strlen(prova);
-    prova[len-3] = '\0';
-
-    printf("Username: %s\n", prova);
-    printf("Prova L\n");
-
+    
     return 0;
 }
 
@@ -114,8 +153,8 @@ int opzione_S(const char *username){
     
     struct tm *tm_info = localtime(&lTime);
 
-    strftime(time_buf, sizeof(time_buf), "%d-%m %H:%M", tm_info);
-    time_buf[11] = '\0';
+    strftime(time_buf, sizeof(time_buf), "%b %d %H:%M", tm_info);
+    time_buf[12] = '\0';
 
     long idle_seconds = currentT - lTime;
     int idle_hours = idle_seconds / 3600;
@@ -195,7 +234,25 @@ int all_user(int tOpt, struct user_list *userList){
     return 0;    
 }
 
-//main
+
+
+struct passwd *getpwnam_case_insensitive(const char *username) {
+    struct passwd *pw;
+    setpwent(); // Rewind del file delle password
+
+    // Ciclo attraverso tutti gli utenti nel file delle password
+    while ((pw = getpwent()) != NULL) {
+        if (strcasecmp(username, pw->pw_name) == 0) { // confronto case-insensitive
+            endpwent(); // Chiusura del file delle password
+            return pw;
+        }
+    }
+
+    endpwent(); // Chiusura del file delle password
+    return NULL;
+}
+
+
 
 int main (int args, char *argv[] ){
 
@@ -273,7 +330,7 @@ int main (int args, char *argv[] ){
     for (int i = counter; i < args; i++)
     {
         username = argv[i];
-        if (username != NULL)
+        if (username != NULL && m_flag)
         {
             if (getpwnam(username) != NULL){
                struct passwd *pw = getpwnam(username);
@@ -297,7 +354,11 @@ int main (int args, char *argv[] ){
                printf("Utente %s non esistente\n", username);
                return 0;
             }
+        }else if (username != NULL)
+        {
+            /* code */
         }
+        
             
         if (counter > 2 || (!l_flag && !p_flag && !s_flag && !m_flag))
         {
@@ -327,6 +388,8 @@ int main (int args, char *argv[] ){
     return 0;
 
 }
+
+
 
 
 
