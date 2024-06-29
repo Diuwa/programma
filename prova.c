@@ -33,12 +33,31 @@ struct user_list
     Opzione_P guarda su finger ma hai tutto il necessario
 */
 
+int opzione_P(const char *username){
+    struct passwd *pwd = getpwnam(username);
+    
+    char *login = pwd -> pw_name;
+    printf("Login: %-15s\t\t\t", login);
+    
+    char *realName = pwd -> pw_gecos;
+    char *del = strchr(realName, ',');
+    *del = '\0';
+
+    printf("Name: %s\n", realName);
+    printf("Directory: %-20s\t\t", pwd -> pw_dir);
+    printf("Shell: %s\n", pwd -> pw_shell);
+
+}
+
+
+
+
 int opzione_L(const char *username){
 
     struct passwd *pws = getpwnam(username);
 
     /*
-        Basta chiamare opzione_m e aggiungerci anche il Plan
+        Basta chiamare opzione_p e aggiungerci anche il Plan
     */
 
 
@@ -106,7 +125,13 @@ int opzione_S(const char *username){
     char *gecos = pws -> pw_gecos;
     char *sOffice = strtok(gecos, ","); // Qui prende il nome reale
     sOffice = strtok(NULL, ","); // Scrivo NULL per poter far riprendere a strtok dal punto di prima
-    char *sOfPhone = strtok(NULL, ",");
+    char *sOfPhone = strtok(NULL, ",");\
+
+    if (sOffice == NULL)
+    {
+        sOffice = sTty;
+    }
+    
 
     if (lTime != 0)
     {
@@ -160,7 +185,8 @@ int all_user(int tOpt, struct user_list *userList){
             free(userList->users[i].username);
         } else if (tOpt == 1)
         {
-            printf("Prova p");
+            opzione_P(userList -> users[i].username);
+            free(userList->users[i].username);
         } else if (tOpt == 2)
         {
             opzione_S(userList->users[i].username);
@@ -271,17 +297,7 @@ int main (int args, char *argv[] ){
                printf("Utente %s non esistente\n", username);
                return 0;
             }
-            
-
-
         }
-        /*
-         else if ((l_flag || p_flag || s_flag || m_flag) && username == NULL)
-        {
-            int a = all_user();
-            return a;
-        }
-        */
             
         if (counter > 2 || (!l_flag && !p_flag && !s_flag && !m_flag))
         {
@@ -294,7 +310,8 @@ int main (int args, char *argv[] ){
         } 
         else if (p_flag)
         {
-            printf("opzione p\n");
+            int p = opzione_P(username);
+            return p;
         } 
         else if (s_flag)
         {
@@ -310,7 +327,6 @@ int main (int args, char *argv[] ){
     return 0;
 
 }
-
 
 
 
