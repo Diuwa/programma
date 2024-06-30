@@ -24,19 +24,23 @@ void send_file(int sockfd, const char* file_path)
     // Invia il nome del file
     strncpy(file_name, strrchr(file_path, '/') ? strrchr(file_path, '/') + 1 : file_path, sizeof(file_name) - 1);
     file_name[sizeof(file_name) - 1] = '\0'; // Assicura la null-terminazione
-    write(sockfd, file_name, sizeof(file_name));
+    write(sockfd, file_name, strlen(file_name));  // Invia il nome del file senza carattere NULL finale
 
     // Invia il contenuto del file
     char buffer[MAX];
     size_t bytes_read;
-	bzero(buffer, sizeof(buffer)); // Azzera il buffer dopo ogni scrittura
     while ((bytes_read = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
-        write(sockfd, buffer, bytes_read);
-        bzero(buffer, sizeof(buffer)); // Azzera il buffer dopo ogni scrittura		
-    }
+    	printf("Bytes read: %zu\n", bytes_read); // Debug print
+    	for (int i = 0; i < bytes_read; i++) {
+        	printf("%02x ", (unsigned char)buffer[i]);
+    	}
+    	printf("\n");
+    	write(sockfd, buffer, bytes_read);
+	}
 
     printf("File %s inviato con successo.\n", file_name);
     fclose(fp);
+    close(sockfd);
 }
 
 
