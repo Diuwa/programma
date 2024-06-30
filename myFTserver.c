@@ -9,7 +9,7 @@
 #include <unistd.h> // read(), write(), close()
 #include <arpa/inet.h>
 #include <getopt.h>
-#define MAX 2000 
+#define MAX 2000
 #define PORT 8080 
 #define SA struct sockaddr 
 
@@ -17,6 +17,7 @@ void receive_file(int connfd, const char* dest_directory)
 { 
     char file_name[200]; 
     int bytes_received;
+    
     // Riceve il nome del file
     bytes_received = read(connfd, file_name, sizeof(file_name)); 
     if (bytes_received <= 0) {
@@ -24,7 +25,7 @@ void receive_file(int connfd, const char* dest_directory)
         close(connfd);
         return;
     }
-	file_name[bytes_received] = '\0'; // Assicura la null-terminazione
+    file_name[bytes_received] = '\0'; // Assicura la null-terminazione
 
     // Crea il percorso completo del file di destinazione
     char dest_path[256];
@@ -37,17 +38,22 @@ void receive_file(int connfd, const char* dest_directory)
         return;
     }
 
-	char buffer[MAX];
-    size_t bytes_written;
-	bzero(buffer, sizeof(buffer)); // Azzera il buffer dopo ogni scrittura
+    char buffer[MAX];
     while ((bytes_received = read(connfd, buffer, sizeof(buffer))) > 0) {
-        bytes_written = fwrite(buffer, 1, bytes_received, fp);
-        if (bytes_written != bytes_received) {
-            printf("Errore nella scrittura dei dati nel file %s\n", dest_path);
-            break;
-        }
-		bzero(buffer, sizeof(buffer)); // Azzera il buffer dopo ogni scrittura
-    }
+    	printf("Bytes received: %d\n", bytes_received); // Debug print
+    	for (int i = 0; i < bytes_received; i++) {
+        	printf("%02x ", (unsigned char)buffer[i]);
+    	}
+    	printf("\n");
+
+    	size_t bytes_written = fwrite(buffer, 1, bytes_received, fp);
+    	if (bytes_written != bytes_received) {
+        	printf("Errore nella scrittura dei dati nel file\n");
+        	fclose(fp);
+        	close(connfd);
+        	return;
+    	}
+	}
 
     if (bytes_received < 0) {
         printf("Errore nella ricezione dei dati\n");
@@ -56,9 +62,8 @@ void receive_file(int connfd, const char* dest_directory)
     }
 
     fclose(fp);
-	// non compie la traduzione da binario a formato scritto, come risolvere???????
-} 
-
+    close(connfd);
+}
 // Function designed for chat between client and server. 
 void func(int connfd) 
 { 
